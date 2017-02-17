@@ -20,6 +20,7 @@ func AddUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func main() {
 
   router := httprouter.New()
+  _ = "breakpoint"
   router.GET("/user/addUser/",AddUser)
   n := negroni.Classic()
   n.UseHandler(router)

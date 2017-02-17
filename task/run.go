@@ -22,13 +22,12 @@ func (self *CrawlTask) login() {
 }
 func (self *CrawlTask) init() {
   url := "http://dsmis.jishunda.cn/WeiXin/Student/EduSiteList.aspx?CurrentPage=1&LoadAjaxData=LoadList"
-
   self.Push(analyze.NewEduSiteReqEntity(url, map[string]string{}))
 }
 func (self *CrawlTask) Run() {
   log.Println("login")
   self.login()
-  self.init()
+  go self.init()
   for {
     select {
       case <- self.Use():
