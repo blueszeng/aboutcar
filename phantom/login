@@ -1,0 +1,68 @@
+
+var system = require('system');
+var page = require('webpage').create();
+var url = system.args[1];
+var pageEncode = system.args[2];
+var userName = system.args[3];
+var passWord = system.args[4];
+var userAgent = system.args[5];
+var cookie = system.args[6];
+var postdata = system.args[7];
+var waitFor = function (testFx, onReady, timeOutMillis) {
+    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 3000,
+        start = new Date().getTime(),
+        condition = false,
+        interval = setInterval(function() {
+            if ( (new Date().getTime() - start < maxtimeOutMillis) && !condition ) {
+                condition = (typeof(testFx) === "string" ? eval(testFx) : testFx());
+            } else {
+                if(!condition) {
+                    console.log("'waitFor()' timeout");
+                    phantom.exit(1);
+                } else {
+                    console.log("'waitFor()' finished in " + (new Date().getTime() - start) + "ms.");
+                    typeof(onReady) === "string" ? eval(onReady) : onReady();
+                    clearInterval(interval);
+                }
+            }
+        }, 250);
+};
+page.onResourceRequested = function(requestData, request) {
+    request.setHeader('Cookie', cookie)
+};
+phantom.outputEncoding = "utf-8";
+page.settings.userAgent = userAgent;
+page.open(url, 'post', postdata, function(status) {
+    if (status !== 'success') {
+        console.log('Unable to access network');
+    } else {
+        waitFor(function() {
+          return page.evaluate(function() {
+            $("#txtUserName")[0].value = "430521199110034261"
+            $("#txtPassword")[0].value = "034261"
+            $("#btnBinding").click()
+            return document.cookie;
+          });
+        }, function(err) {
+
+          var cookies = page.cookies
+          for(var i in cookies) {
+              delete cookies[i].path
+              delete cookies[i].domain
+              delete cookies[i].expires
+              delete cookies[i].expiry
+              delete cookies[i].httponly
+              delete cookies[i].secure
+              // delete cookies[i].value
+              // delete cookies[i].name
+
+          }
+          var resp = {
+              "Cookie": cookies
+          };
+          page.render('./ee.png')
+          console.log(JSON.stringify(resp));
+          phantom.exit();
+        });
+    }
+});
