@@ -1,66 +1,72 @@
 package analyze
-import (
-   "github.com/PuerkitoBio/goquery"
-   "aboutcar/common"
-   . "aboutcar/rest/db"
-   "log"
-  //  "fmt"
-   "strings"
-)
-type (
- Edusite struct {
-    Uuid string `xorm:"varchar(255) index not null unique 'uuid'"`
-    County string `xorm:"varchar(255)"`
-    TrainName string `xorm:"varchar(255)"`
-  }
-  EduSiteReqEntity struct {
-    Url string
-    Temp map[string] string
-    Edusites []Edusite
 
-  }
+import (
+	"aboutcar/common"
+	. "aboutcar/rest/db"
+	"log"
+
+	"github.com/PuerkitoBio/goquery"
+	//  "fmt"
+	"strings"
+)
+
+type (
+	Edusite struct {
+		Uuid      string `xorm:"varchar(255) index not null unique 'uuid'"`
+		County    string `xorm:"varchar(255)"`
+		TrainName string `xorm:"varchar(255)"`
+	}
+	EduSiteReqEntity struct {
+		Url      string
+		Temp     map[string]string
+		Edusites []Edusite
+	}
 )
 
 // 地址
-func NewEduSiteReqEntity(url string, temp map[string] string) *EduSiteReqEntity {
-   eduSiteReq := &EduSiteReqEntity{
-      Url: url,
-      Temp: temp,
-   }
-   return eduSiteReq
+func NewEduSiteReqEntity(url string, temp map[string]string) *EduSiteReqEntity {
+	eduSiteReq := &EduSiteReqEntity{
+		Url:  url,
+		Temp: temp,
+	}
+	return eduSiteReq
 }
 
-func(self *EduSiteReqEntity) GetUrl() string {
-  return self.Url
+func (self *EduSiteReqEntity) GetUrl() string {
+	return self.Url
 }
 
-func(self *EduSiteReqEntity) Analyze(document *goquery.Document, task common.Task) {
-    document.Find("#tab tr").Each(func(i int, contentSelectionTr *goquery.Selection) {
-          uuid, _ := contentSelectionTr.Find("td:first-child input").Attr("id")
-          county := contentSelectionTr.Find("td:nth-child(2)").Text()
-          trainName := contentSelectionTr.Find("td:nth-child(3)").Text()
-          if strings.HasPrefix(uuid, "rad") {
-            uuid = uuid[3:]
-          }
-          data := Edusite{
-            Uuid: uuid,
-            County: county,
-            TrainName: trainName,
-          }
-          self.Edusites = append(self.Edusites, data)
-          // url := fmt.Sprintf("http://dsmis.jishunda.cn/WeiXin/Student/TrainItemList.aspx?CurrentPage=1&LoadAjaxData=LoadList&trainId=%s", uuid)
-          // temp := map[string]string{
-          //   "trainId" : uuid,
-          // }
-          // task.Push(NewCoachReqEntity(url, temp))
-      })
+func (self *EduSiteReqEntity) Analyze(document *goquery.Document, task common.Task) {
 
+	document.Find("#tab tr").Each(func(i int, contentSelectionTr *goquery.Selection) {
+		uuid, _ := contentSelectionTr.Find("td:first-child input").Attr("id")
+		county := contentSelectionTr.Find("td:nth-child(2)").Text()
+		trainName := contentSelectionTr.Find("td:nth-child(3)").Text()
+		if strings.HasPrefix(uuid, "rad") {
+			uuid = uuid[3:]
+		}
+		data := Edusite{
+			Uuid:      uuid,
+			County:    county,
+			TrainName: trainName,
+		}
+		log.Println(data)
+		self.Edusites = append(self.Edusites, data)
+		// url := fmt.Sprintf("http://dsmis.jishunda.cn/WeiXin/Student/TrainItemList.aspx?CurrentPage=1&LoadAjaxData=LoadList&eduSiteId=%s", uuid)
+		// temp := map[string]string{
+		// 	"trainId": uuid,
+		// }
+		// log.Println(url)
+		// task.Push(NewCoachReqEntity(url, temp))
+	})
 }
-func(self *EduSiteReqEntity) SaveData() {
-  var err error
-  err = DB.Sync2(new(Edusite))
-  _, err = DB.Insert(&self.Edusites)
-  log.Println(err)
+
+func (self *EduSiteReqEntity) SaveData() {
+	log.Println("v ...interface{}")
+	var err error
+	err = DB.Sync2(new(Edusite))
+	_, err = DB.Insert(&self.Edusites)
+	log.Println(err)
 }
 
 // //教练

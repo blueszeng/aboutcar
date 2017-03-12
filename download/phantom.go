@@ -1,8 +1,10 @@
 package download
 
 import (
+	"bytes"
 	"encoding/json"
-  "io"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,10 +12,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"fmt"
-  "bytes"
-  // "aboutcar/config"
+	// "aboutcar/config"
 )
+
 type (
 	Phantom struct {
 		PhantomjsFile string            //Phantomjs完整文件名
@@ -24,72 +25,72 @@ type (
 		Cookie string
 		Body   string
 	}
-  Login struct {
-    UserName string
-    Password string
-    Url string
-  }
-  Cookie struct {
-    // Domain string `json:"domain"`
-    // Expires string  `json:"expires"`
-    // Expiry int `json:"expiry"`
-    // Httponly bool `json:"httponly"`
-    Name string `json:"name"`
-    // Path  string `json:"path"`
-    // Secure  string `json:"secure"`
-    Value string `json:"value"`
-
-  }
-  Cookielice struct {
-    Cookies []Cookie `json:"Cookie"`
-  }
+	Login struct {
+		UserName string
+		Password string
+		Url      string
+	}
+	Cookie struct {
+		// Domain string `json:"domain"`
+		// Expires string  `json:"expires"`
+		// Expiry int `json:"expiry"`
+		// Httponly bool `json:"httponly"`
+		Name string `json:"name"`
+		// Path  string `json:"path"`
+		// Secure  string `json:"secure"`
+		Value string `json:"value"`
+	}
+	Cookielice struct {
+		Cookies []Cookie `json:"Cookie"`
+	}
 )
 
 func (self *Phantom) Login(login Login) (cookie string, err error) {
-  var encoding = "utf-8"
-  var args = []string{
-  	self.jsFileMap["login"],
-    login.Url,
-    encoding,
-    login.UserName,
-    login.Password,
-  }
-  cmd := exec.Command(self.PhantomjsFile, args...)
-  var body io.Reader
-  if body, err = cmd.StdoutPipe(); err != nil {
-    log.Fatal(err)
-  }
-  if cmd.Start() != nil || body == nil {
-    log.Fatal(err)
-  }
-  var b []byte
-  b, err = ioutil.ReadAll(body)
-  if err != nil {
-    log.Fatal(err)
-  }
+	var encoding = "utf-8"
+	var args = []string{
+		self.jsFileMap["login"],
+		login.Url,
+		encoding,
+		login.UserName,
+		login.Password,
+	}
+	cmd := exec.Command(self.PhantomjsFile, args...)
+	var body io.Reader
+	if body, err = cmd.StdoutPipe(); err != nil {
+		log.Fatal(err)
+	}
+	if cmd.Start() != nil || body == nil {
+		log.Fatal(err)
+	}
+	var b []byte
+	b, err = ioutil.ReadAll(body)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  b = bytes.TrimSpace(b)
-  len := bytes.Index(b, []byte{109,115,46,10}) + 4
-  b = b[len:]
-  fmt.Println(string(b))
-  cookies := Cookielice{}
-  err = json.Unmarshal(b, &cookies)
-  for _, ccookie := range cookies.Cookies {
-    cookie += fmt.Sprintf("%s=%s;", ccookie.Name, ccookie.Value)
-  }
-  return
+	b = bytes.TrimSpace(b)
+	len := bytes.Index(b, []byte{109, 115, 46, 10}) + 4
+	b = b[len:]
+	fmt.Println(string(b))
+	cookies := Cookielice{}
+	err = json.Unmarshal(b, &cookies)
+	for _, ccookie := range cookies.Cookies {
+		cookie += fmt.Sprintf("%s=%s;", ccookie.Name, ccookie.Value)
+	}
+	log.Println(cookies)
+	return
 }
 
 func (self *Phantom) Downloads(req *http.Request) (resp *http.Response, err error) {
 	encoding := "utf-8"
 	var args []string
-  url := fmt.Sprintf("%s", req.URL)
-  body := fmt.Sprintf("%s", req.Body)
+	url := fmt.Sprintf("%s", req.URL)
+	body := fmt.Sprintf("%s", req.Body)
 	switch req.Method {
 	case "GET":
 		args = []string{
 			self.jsFileMap["get"],
-		  url,
+			url,
 			req.Header.Get("Cookie"),
 			encoding,
 			req.Header.Get("User-Agent"),
@@ -104,8 +105,8 @@ func (self *Phantom) Downloads(req *http.Request) (resp *http.Response, err erro
 			body,
 		}
 	}
-  fmt.Println(args)
-  resp = new(http.Response)
+	fmt.Println(args)
+	resp = new(http.Response)
 	cmd := exec.Command(self.PhantomjsFile, args...)
 	if resp.Body, err = cmd.StdoutPipe(); err != nil {
 		log.Fatal(resp.Body)
@@ -118,18 +119,18 @@ func (self *Phantom) Downloads(req *http.Request) (resp *http.Response, err erro
 	if err != nil {
 		log.Fatal(err)
 	}
-  fmt.Println(string(b))
+	fmt.Println(string(b))
 
-  retResp := Response{}
+	retResp := Response{}
 
-  s := `{"Cookie":"","Body":"<html><head><script language=\"javascript\"> \n "}`
+	s := `{"Cookie":"","Body":"<html><head><script language=\"javascript\"> \n "}`
 
 	err = json.Unmarshal([]byte(s), &retResp)
 	if err != nil {
 		log.Fatal(err)
 	}
 	resp.Header = req.Header
-  resp.Header.Set("Set-Cookie", retResp.Cookie)
+	resp.Header.Set("Set-Cookie", retResp.Cookie)
 	resp.Body = ioutil.NopCloser(strings.NewReader(retResp.Body))
 
 	if err == nil {
@@ -141,7 +142,6 @@ func (self *Phantom) Downloads(req *http.Request) (resp *http.Response, err erro
 	}
 	return
 }
-
 
 //销毁js临时文件
 // func (self *Phantom) DestroyJsFiles() {
@@ -166,7 +166,6 @@ func (self *Phantom) createJsFile(fileName, jsCode string) {
 	self.jsFileMap[fileName] = fullFileName
 }
 
-
 func NewPhantom(phantomjsFile, tempJsDir string) *Phantom {
 	phantom := &Phantom{
 		PhantomjsFile: phantomjsFile,
@@ -187,7 +186,7 @@ func NewPhantom(phantomjsFile, tempJsDir string) *Phantom {
 	}
 	phantom.createJsFile("get", getJs)
 	phantom.createJsFile("post", postJs)
-  phantom.createJsFile("login", loginJs)
+	phantom.createJsFile("login", loginJs)
 	return phantom
 }
 
@@ -279,7 +278,7 @@ var userAgent = system.args[5];
 var cookie = system.args[6];
 var postdata = system.args[7];
 var waitFor = function (testFx, onReady, timeOutMillis) {
-    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 3000,
+    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 4000,
         start = new Date().getTime(),
         condition = false,
         interval = setInterval(function() {
